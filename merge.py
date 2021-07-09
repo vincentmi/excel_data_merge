@@ -134,7 +134,8 @@ def parse_users(v):
             users.append(str(uid))
 
     if len(users) > 0:
-        return json.dumps(users)
+        # return json.dumps(users)
+        return ",".join(users)
     else:
         return None
 
@@ -198,22 +199,24 @@ def gen_id(gen_str):
 
 def guess_school_system(v):
     # print(v)
+    system = []
     if v.find("小学") != -1:
-        return match("school_system", "小学")
+        system.append(str(match("school_system", "小学")))
     elif v.find("中学") != -1:
-        return match("school_system", "初级中学")
+        system.append(str(match("school_system", "初级中学")))
     elif v.find("九年") != -1:
-        return match("school_system", "九年一贯制学校")
+        system.append(str(match("school_system", "九年一贯制学校")))
     elif v.find("高级中学") != -1:
-        return match("school_system", "高级中学")
+        system.append(str(match("school_system", "高级中学")))
     elif v.find("初级中学") != -1:
-        return match("school_system", "初级中学")
+        system.append(str(match("school_system", "初级中学")))
     elif v.find("中学") != -1:
-        return match("school_system", "完全中学")
+        system.append(str(match("school_system", "完全中学")))
     elif v.find("学校") != -1:
-        return match("school_system", "九年一贯制学校")
+        system.append(str(match("school_system", "九年一贯制学校")))
     else:
-        return 1
+        system.append("1")
+    return json.dumps(system)
 
 
 def gen_client_code(row):
