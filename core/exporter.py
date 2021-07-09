@@ -13,6 +13,10 @@ def make_index(data_array, key, value):
     return index
 
 
+def write_file(file, sql):
+    fp = open(file, "wb+")
+    fp.write(bytes(sql, encoding="utf8"))
+
 # 导出数据
 def mapper(sh, row_start, column_map, callback=None):
     row_id = row_start

@@ -1,27 +1,100 @@
+import csv
 import json
 import time
 
 import xlrd
 
 from core import exporter, query
+from core.exporter import write_file
 from core.enum_util import match, multi
 
 xls_client = "source/client.xls"
 xls_contact = "source/contact.xls"
 xls_follow = "source/follow.xls"
 
+data_city = "source/data.csv"
+
 sql_client = "out/client.sql"
 sql_contact = "out/contact.sql"
 sql_follow = "out/follow.sql"
 
 indexClient = {}
+srcCity = {
+    10001: {"name": "四川", "parent": 0},
+    10002: {"name": "成都", "parent": 10001},
+    10003: {"name": "锦江区", "parent": 10002},
+}
+indexCity = json.load(open("out/area_index.json", "r"))
 
 defaultUser = 999
-indexUser = {
-    "孙绍光": 100,
-    "李成亮": 101,
-    "曾娣": 103
-}
+indexUser = {"黄江": 1,
+             "米文书": 7,
+             "丁天": 33,
+             "陈靓艳": 34,
+             "张军": 35,
+             "熊博": 36,
+             "梁智燊": 37,
+             "胡润佳": 38,
+             "黄贵添": 39,
+             "林韵": 40,
+             "张佩佩": 41,
+             "李秋明": 42,
+             "方燕娟": 43,
+             "陈慧琳": 44,
+             "杨宁": 45,
+             "周烨玮": 46,
+             "江瑞": 47,
+             "许婷婷": 48,
+             "唐章强": 49,
+             "郝旻": 50,
+             "马梦芸": 51,
+             "杨顺富": 52,
+             "陈松明": 53,
+             "周芳": 54,
+             "李成亮": 55,
+             "曾娣": 56,
+             "李林恒": 57,
+             "孙绍光": 58,
+             "邓潔": 59,
+             "唐振华": 60,
+             "殷杰": 61,
+             "陈胡": 62,
+             "曹琼琼": 63,
+             "柏杰": 64,
+             "李明昊": 65,
+             "王彦明": 66,
+             "杜鑫": 67,
+             "王迎如": 68,
+             "林潇君": 69,
+             "丁楠": 70,
+             "王嘉程": 71,
+             "康翔宇": 72,
+             "吴小丽": 73,
+             "梁宇威": 74,
+             "杨英": 75,
+             "符婷婷": 76,
+             "易雪": 77,
+             "王露": 78,
+             "李诚": 79,
+             '谭忠鹏': 45,
+             '康君': 33,
+             '徐第萍': 58,
+             '叶星辰': 62,
+             '弓毓瑾': 62,
+             '程金之': 62,
+             '董慧': 45,
+             '谢淼': 33,
+             '章津萍': 45,
+             '王楠': 33,
+             '何泽明': 33,
+             '魏成兵': 58,
+             '潘希琳': 39,
+             '廖燕': 33,
+             '于骎': 33,
+             '李彬': 33
+             }
+
+personQuit = {}
 
 idGenMap = {}
 
@@ -52,8 +125,9 @@ def parse_date_preference(v):
 
 
 def parse_users(v):
-    v = v.strip()
+    v = v.strip().replace(",", "|")
     users = []
+
     for item in v.split("|"):
         uid = parse_user(item)
         if uid is not None:
@@ -66,11 +140,13 @@ def parse_users(v):
 
 
 def parse_user(v):
+    v = v.strip()
     if v is None or v == "":
         return defaultUser
     if indexUser.__contains__(v):
         return indexUser[v]
     else:
+        personQuit[v] = 1
         return defaultUser
 
 
@@ -154,9 +230,9 @@ clientColumnMap = {
     2: {"n": "phone", "f": parse_phone},
     3: {"n": "client_status", "f": lambda v: match("client_status", v)},
     4: {"n": "content"},
-    # 5: {"n": "province"},
-    # 6: {"n": "city"},
-    # 7: {"n": "area"},
+    5: {"n": "province"},
+    6: {"n": "city"},
+    7: {"n": "area"},
     8: {"n": "address"},
     9: {"n": "yx_incharge_role", "f": lambda v: multi("role", v)},
     10: {"n": "decision_maker_name"},
@@ -207,16 +283,54 @@ def client_row_callback(row):
     if row["address"] is None or row["address"] == "":
         row["address"] = " "
 
-    row["client_address_ids"] = '["510000","510100","510116"]'
-    row["client_address_names"] = '["四川省","成都市","双流区"]'
+    # -----
+
+    if row["area"] == "郫县":
+        row["area"] = "郫都区"
+    if row["area"] == "达县":
+        row["area"] = "达川区"
+    if row["province"] == "四川":
+        row["province"] = "四川省"
+    if row["area"] == "成都":
+        row["city"] = "成都市"
+    if row["city"] == "成都":
+        row["city"] = "成都市"
+    if row["area"] == "射洪县":
+        row["area"] = "射洪市"
+    if row["area"] == "双流县":
+        row["area"] = "双流区"
+    if row["province"] == "广西省" or row["province"] == "广西":
+        row["province"] = "广西壮族自治区"
+
+    city_id = []
+    city_name = []
+    if indexCity.__contains__(row["province"]):
+        city_id.append(indexCity[row["province"]])
+        city_name.append(row["province"])
+    else:
+        print(u"no-match %s" % row["province"])
+
+    if indexCity.__contains__(row["city"]):
+        city_id.append(indexCity[row["city"]])
+        city_name.append(row["city"])
+    else:
+        print(u"no-match %s" % row["city"])
+
+    if indexCity.__contains__(row["area"]):
+        city_id.append(indexCity[row["area"]])
+        city_name.append(row["area"])
+    else:
+        print(u"no-match %s" % row["area"])
+
+    row["client_address_ids"] = json.dumps(city_id, ensure_ascii=False)
+    row["client_address_names"] = json.dumps(city_name, ensure_ascii=False)
+
+    del row["province"]
+    del row["city"]
+    del row["area"]
 
     # print("{}", row)
     return row
-
-
-def write_file(file, sql):
-    fp = open(file, "wb+")
-    fp.write(bytes(sql, encoding="utf8"))
 
 
 def export_client(export_sql=False):
@@ -300,7 +414,9 @@ def export_contact(export_sql=False):
     if export_sql:
         write_file(sql_contact, struct_sql + sql)
 
+
 # ######## 跟进记录
+
 
 followColumnMap = {
     0: {"n": "name"},
@@ -346,3 +462,6 @@ def export_follow(export_sql=False):
 indexClient = export_client(True)
 export_contact(True)
 export_follow(True)
+
+
+print(personQuit)
