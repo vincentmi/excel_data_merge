@@ -17,6 +17,7 @@ data_city = "source/data.csv"
 sql_client = "out/client.sql"
 sql_contact = "out/contact.sql"
 sql_follow = "out/follow.sql"
+sql_client_connect = "out/client_sale.sql"
 
 indexClient = {}
 srcCity = {
@@ -25,6 +26,8 @@ srcCity = {
     10003: {"name": "锦江区", "parent": 10002},
 }
 indexCity = json.load(open("out/area_index.json", "r"))
+
+clientSalesConnect = []
 
 defaultUser = 999
 indexUser = {"黄江": 1,
@@ -332,6 +335,15 @@ def client_row_callback(row):
     del row["city"]
     del row["area"]
 
+    # collect client sales connection
+    if row["sales"] is not None and row["sales"] != "":
+        for sale_id in row["sales"].split(","):
+            connect = {
+                "client_base_id": row["id"],
+                "sale_id": sale_id
+            }
+            clientSalesConnect.append(connect)
+
     # print("{}", row)
     return row
 
@@ -341,6 +353,7 @@ def export_client(export_sql=False):
     wb_sh = wb_client.sheet_by_index(0)
     print(u"%s - %d line, %d cols" % (xls_client, wb_sh.nrows, wb_sh.ncols))
     client_data = exporter.mapper(wb_sh, 1000, clientColumnMap, client_row_callback)
+
 
     # exporter.print_header(sh1, 1, 2)
     # exporter.print_row(data[0])
@@ -354,6 +367,7 @@ def export_client(export_sql=False):
 
     if export_sql:
         write_file(sql_client, struct_sql + sql)
+        write_file(sql_client_connect,query.build_query(clientSalesConnect, "client_sale", 100))
 
     return client_index
 
