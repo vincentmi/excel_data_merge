@@ -91,7 +91,7 @@ for province in data:
         for area in city["children"]:
             print(u"    %s(%s)" % (area["name"], area["code"]))
             item_count = item_count + 1
-            record = create_record(item_count, area["code"], area["name"], province["code"], "中国/"
+            record = create_record(item_count, area["code"], area["name"], city["code"], "中国/"
                                    + province["name"] + "/" + city["name"], TYPE_AREA)
             locationData.append(record)
 
